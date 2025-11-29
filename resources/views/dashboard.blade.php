@@ -21,6 +21,61 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 items-start">
+
+                        <div class="bg-white overflow-hidden shadow-sm rounded-lg border-l-8 border-red-500">
+                            <div class="p-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-bold text-red-600">⚠️ Stok Habis</h3>
+                                    <a href="{{ route('products.index', ['stock_status' => 'habis']) }}" class="text-sm text-blue-500 hover:underline">Lihat Semua &rarr;</a>
+                                </div>
+
+                                @if($products_habis->isEmpty())
+                                    <p class="text-gray-500 italic text-sm">Aman, tidak ada barang habis.</p>
+                                @else
+                                    <ul class="divide-y divide-gray-200">
+                                        @foreach($products_habis as $item)
+                                        <li class="py-3 flex justify-between items-center">
+                                            <span class="text-gray-700 font-medium">{{ $item->name }}</span>
+                                            <a href="{{ route('products.edit', $item->id) }}" class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs hover:bg-red-200">
+                                                Restock
+                                            </a>
+                                        </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow-sm rounded-lg border-l-8 border-orange-300">
+                            <div class="p-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-bold text-orange-400">⚡ Stok Menipis</h3>
+                                    <a href="{{ route('products.index', ['stock_status' => 'menipis']) }}" class="text-sm text-blue-500 hover:underline">Lihat Semua &rarr;</a>
+                                </div>
+
+                                @if($products_menipis->isEmpty())
+                                    <p class="text-gray-500 italic text-sm">Stok aman terkendali.</p>
+                                @else
+                                    <ul class="divide-y divide-gray-200">
+                                        @foreach($products_menipis as $item)
+                                        <li class="py-3 flex justify-between items-center">
+                                            <div>
+                                                <span class="text-gray-700 font-medium block">{{ $item->name }}</span>
+                                                <span class="text-xs text-orange-500">Sisa: {{ $item->stock }}</span>
+                                            </div>
+                                            <a href="{{ route('products.edit', $item->id) }}" class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs hover:bg-orange-200">
+                                                Tambah
+                                            </a>
+                                        </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        </div>
+
+                    </div>
+
                     <div class="mt-8">
                         <a href="{{ route('products.index') }}" class="text-blue-600 hover:underline">
                             &rarr; Kelola Data Barang

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use RealRashid\SweetAlert\Facades\Alert;
 
 class ProductController extends Controller
@@ -11,17 +13,33 @@ class ProductController extends Controller
     // halaman daftar barang
     public function index(Request $request)
     {
-        $products = Product::when($request->search, function ($query) use ($request) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        })->paginate(5);
+        $categories = Category::all();
 
-        return view('products.index', compact('products'));
+        $products = Product::with('category') // Eager loading
+        ->when($request->search, function ($query) use ($request) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        })
+        ->when($request->category_id, function ($query) use ($request) {
+            $query->where('category_id', $request->category_id);
+        })
+        ->when($request->stock_status, function($query) use ($request) {
+            if ($request->stock_status == 'habis') {
+                $query->where('stock', '<=', 0);
+            } elseif ($request->stock_status == 'menipis') {
+                $query->where('stock', '>', 0)->where('stock', '<', 5);
+            }
+        })
+        ->latest() // urut terbaru
+        ->paginate(5);
+
+        return view('products.index', compact('products', 'categories'));
     }
 
     // halaman form tambah barang
     public function create()
     {
-        return view('products.create');
+        $categories = Category::all();
+        return view('products.create', compact('categories'));
     }
 
     // simpan data ke database
@@ -29,6 +47,8 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'image' => 'image|mimes:jpeg,png,jpg|max:2048',
+            'category_id' => 'required',
             'price' => 'required|numeric',
             'stock' => 'required|numeric',
         ], [
@@ -40,7 +60,14 @@ class ProductController extends Controller
             'stock.numeric' => 'Stok harus berupa angka!'
         ]);
 
-        Product::create($request->all());
+        $input = $request->all();
+
+        if ($request->hasFile('image')){
+            $imagePath = $request->file('image')->store('products', 'public');
+            $input['image'] = $imagePath;
+        }
+
+        Product::create($input);
         Alert::success('Success', 'Barang berhasil disimpan!');
         return redirect()->route('products.index');
     }
@@ -56,7 +83,8 @@ class ProductController extends Controller
     // halaman form edit
     public function edit(Product $product)
     {
-        return view('products.edit', compact('product'));
+        $categories = Category::all();
+        return view('products.edit', compact('product', 'categories'));
     }
 
     // update data
@@ -64,6 +92,8 @@ class ProductController extends Controller
     {
         $request->validate([
             'name' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'category_id' => 'required',
             'price' => 'required|numeric',
             'stock' => 'required|numeric',
         ],[
@@ -75,7 +105,21 @@ class ProductController extends Controller
             'stock.numeric' => 'Stok harus berupa angka!'
         ]);
 
-        $product->update($request->all());
+        $input = $request->all();
+
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+
+            $imagePath = $request->file('image')->store('products', 'public');
+
+            $input['image'] = $imagePath;
+        } else {
+            unset($input['input']);
+        }
+
+        $product->update($input);
         Alert::success('Success', 'Data berhasi diupdate!');
         return redirect()->route('products.index');
     }
@@ -83,6 +127,10 @@ class ProductController extends Controller
     // delete data
     public function destroy(Product $product)
     {
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
+
         $product->delete();
         Alert::success('Success', 'Barang dihapus!');
         return redirect()->route('products.index');
